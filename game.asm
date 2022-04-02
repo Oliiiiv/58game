@@ -41,6 +41,7 @@
 .eqv	DOWN_RIGHT_CORNER	0x1000BFFC
 .eqv	LAND_RIGHT_CORNER	0x1000B8FC
 
+.eqv	RAB_INITIAL	0x10008014
 #about graph size
 .eqv	WIDTH	64
 .eqv	HEIGHT	64
@@ -174,8 +175,8 @@ EndDrawPlatform:
 	
 ###############Draw Rabbit###############
 DrawRabbit:
-	#calculate the address and store in t4
-	li $t4, FRAME_BASE
+	#the initial address and store in t4
+	li $t4, RAB_INITIAL
 	
 DrawRabbitColor:
 	li $t0, RAB_BASE_COLOR
@@ -232,6 +233,14 @@ DrawRabbitEnd:
 	sw $t0, 16($t4)
 	sw $t0, 20($t4)
 	
+restoreRabAddr:
+	addi $t4, $t4, MINUS_WIDTH_BY4
+	addi $t4, $t4, MINUS_WIDTH_BY4
+	addi $t4, $t4, MINUS_WIDTH_BY4
+	addi $t4, $t4, MINUS_WIDTH_BY4
+	addi $t4, $t4, MINUS_WIDTH_BY4
+	addi $t4, $t4, MINUS_WIDTH_BY4
+	addi $t4, $t4, MINUS_WIDTH_BY4
 ###############Draw Enemy###############
 DrawEnemy:
 	#calculate address
@@ -276,8 +285,6 @@ DrawEnemy:
 	sw $t0, 8($t2)
 
 ###############Draw Timothy#############
-	
-	
 DrawTimothy:
 	#calculate address
 	li $t2, LAND_RIGHT_CORNER
@@ -300,13 +307,17 @@ DrawTimothy:
 	addi $t2, $t2, WIDTH_BY4	#row 4
 	sw $t0, 4($t2)
 	
-	
+	li $s0, RAB_INITIAL
 mainLoop:
-	#key_update(int rabbit, int *keystroke_event) should be changed
-	add $a0, $t4, $zero	#store rabbit address
-        add $a1, $s7, $zero	#keystoke. Need to be revised!!!!!
+	#key_update(int rabbit) 
+	addi $sp, $sp, -4	#store rabbit address
+	sw $s0, 0($sp)
         jal key_update
-
+        
+	#take the return value of key_update, which is the new address of rabbit
+	lw $s0, 0($sp)	
+	addi $sp, $sp, 4
+	
 refresh:
 	li $v0, 32
 	addi $a0, $a0, 40
@@ -318,37 +329,46 @@ END:
 	syscall
 	
 ###################END MAIN FUNC##################
-key_update: #check whether the user has pressed any key
-        li $t9, 0xffff0000 
-        lw $t8, 0($t9) 
-        beq $t8, 1, k_event
+key_update:
+	#pop the address of the rabbit in t1
+	lw $t0, 0($sp)
+	addi $sp, $sp, 4
+	#check whether the user has pressed any key
+        li $t3, 0xffff0000 
+        lw $t2, 0($t3) 
+        beq $t2, 1, k_event
         
-k_re:   jr $ra #Return from key_update() function
+k_re:
+	#push the new address of the rabbit in the stack
+	addi $sp, $sp, -4
+        sw $t0, 0($sp)
+        
+	jr $ra #Return from key_update() function
         
 k_event: #Branch to correponding keystroke event
-        lw $t5, 4($a1)
-        
+        lw $t2, 4($t3)
+    	#load colors 
         li $t6, RAB_CHEEK_COLOR
         li $t7, RAB_BASE_COLOR
         li $t8, RAB_EYE_COLOR
         li $t9, RAB_EAR_COLOR
         #press r to restart
-        beq $t5, 0x70, respond_restart
+        beq $t2, 0x70, respond_restart
         beq $s2, -1, k_re
-        beq $t5, 0x61, respond_a
-        beq $t5, 0x64, respond_d
-        beq $t5, 0x77, respond_w
+        beq $t2, 0x61, respond_a
+        beq $t2, 0x64, respond_d
+        beq $t2, 0x77, respond_w
         j k_re
         
 respond_a:
 	#check whether reach the left end
-        lw $t0, 0($a0)	#address of rabbit
-        addi $t2, $t0, TAIL_OFFSET
+        #t1 stores the address of the rabbit
+        addi $t3, $t0, TAIL_OFFSET
         li $t1, 256
         
-        div $t2, $t1
+        div $t3, $t1
         mfhi $t1
-        beq $t1, 0, k_re
+        beq $t1, $zero, k_re
         
         #refresh the picture of rabbit
         #make the current position black
@@ -356,13 +376,37 @@ respond_a:
         jal clear_rabbit
         #draw the new rabbit
         addi $t0, $t0, -4
+        
         move $a0, $t0
         jal DrawRabFunc
         
+        lw $t0, 0($sp)	#use s0 to store the address of rabbit
+        addi $sp, $sp, 4
         j k_re
+        
 respond_d:
-
-	j k_re
+	#check whether reach the left end
+        #t1 stores the address of the rabbit
+        addi $t3, $t0, TAIL_OFFSET
+        li $t1, 256
+        
+        div $t3, $t1
+        mfhi $t1
+        beq $t1, $zero, k_re
+        
+        #refresh the picture of rabbit
+        #make the current position black
+        move $a0, $t0
+        jal clear_rabbit
+        #draw the new rabbit
+        addi $t0, $t0, 4	#update the new addr of rabbit
+        
+        move $a0, $t0	#push the address of rabbit
+        jal DrawRabFunc
+        
+        lw $t0, 0($sp)	#use s0 to store the address of rabbit
+        addi $sp, $sp, 4
+        j k_re
 respond_w:
 
 	j k_re
@@ -370,7 +414,7 @@ respond_restart:
 
 ##############END OF KEY CONTROL###############
 clear_rabbit:
-	move $t0, $a0
+	lw $t0, 0($a0)
 	li $t2, BLACK
 
 ClearRabbit:
@@ -422,13 +466,20 @@ ClearRabbit:
 	sw $t2, 16($t4)
 	sw $t2, 20($t4)
 	
+	addi $t4, $t4, MINUS_WIDTH_BY4
+	addi $t4, $t4, MINUS_WIDTH_BY4
+	addi $t4, $t4, MINUS_WIDTH_BY4
+	addi $t4, $t4, MINUS_WIDTH_BY4
+	addi $t4, $t4, MINUS_WIDTH_BY4
+	addi $t4, $t4, MINUS_WIDTH_BY4
+	addi $t4, $t4, MINUS_WIDTH_BY4
+	
 	jr $ra
 	
 	
 	
 DrawRabFunc:
 	#calculate the address and store in t4
-	move $t4, $a0
 	
 	li $t0, RAB_BASE_COLOR
 	li $t1, RAB_EYE_COLOR
@@ -436,50 +487,61 @@ DrawRabFunc:
 	li $t3, RAB_CHEEK_COLOR
 
 	#row 1
-	sw $t0, 8($t4)
-	sw $t0, 16($t4)
+	sw $t0, 8($a0)
+	sw $t0, 16($a0)
 
-	addi $t4, $t4, WIDTH_BY4	#row 2
-	sw $t2, 8($t4)
-	sw $t2, 16($t4)
+	addi $a0, $a0, WIDTH_BY4	#row 2
+	sw $t2, 8($a0)
+	sw $t2, 16($a0)
 
-	addi $t4, $t4, WIDTH_BY4	#row 3
-	sw $t2, 8($t4)
-	sw $t2, 16($t4)
+	addi $a0, $a0, WIDTH_BY4	#row 3
+	sw $t2, 8($a0)
+	sw $t2, 16($a0)
 	
-	addi $t4, $t4, WIDTH_BY4	#row 4
-	sw $t0, 4($t4)
-	sw $t0, 8($t4)
-	sw $t0, 12($t4)
-	sw $t0, 16($t4)
-	sw $t0, 20($t4)
+	addi $a0, $a0, WIDTH_BY4	#row 4
+	sw $t0, 4($a0)
+	sw $t0, 8($a0)
+	sw $t0, 12($a0)
+	sw $t0, 16($a0)
+	sw $t0, 20($a0)
 	
-	addi $t4, $t4, WIDTH_BY4	#row 5
-	sw $t0, 4($t4)
-	sw $t0, 8($t4)
-	sw $t0, 12($t4)
-	sw $t0, 16($t4)
-	sw $t0, 20($t4)
+	addi $a0, $a0, WIDTH_BY4	#row 5
+	sw $t0, 4($a0)
+	sw $t0, 8($a0)
+	sw $t0, 12($a0)
+	sw $t0, 16($a0)
+	sw $t0, 20($a0)
 	
-	addi $t4, $t4, WIDTH_BY4	#row 6
-	sw $t0, 4($t4)
-	sw $t1, 8($t4)
-	sw $t0, 12($t4)
-	sw $t1, 16($t4)
-	sw $t0, 20($t4)
+	addi $a0, $a0, WIDTH_BY4	#row 6
+	sw $t0, 4($a0)
+	sw $t1, 8($a0)
+	sw $t0, 12($a0)
+	sw $t1, 16($a0)
+	sw $t0, 20($a0)
 	
-	addi $t4, $t4, WIDTH_BY4	#row 7
-	sw $t0, 0($t4)
-	sw $t3, 4($t4)
-	sw $t0, 8($t4)
-	sw $t0, 12($t4)
-	sw $t0, 16($t4)
-	sw $t3, 20($t4)
+	addi $a0, $a0, WIDTH_BY4	#row 7
+	sw $t0, 0($a0)
+	sw $t3, 4($a0)
+	sw $t0, 8($a0)
+	sw $t0, 12($a0)
+	sw $t0, 16($a0)
+	sw $t3, 20($a0)
 	
-	addi $t4, $t4, WIDTH_BY4	#row 8
-	sw $t0, 4($t4)
-	sw $t0, 8($t4)
-	sw $t0, 12($t4)
-	sw $t0, 16($t4)
-	sw $t0, 20($t4)
+	addi $a0, $a0, WIDTH_BY4	#row 8
+	sw $t0, 4($a0)
+	sw $t0, 8($a0)
+	sw $t0, 12($a0)
+	sw $t0, 16($a0)
+	sw $t0, 20($a0)
+	
+	#revise and return the new addtress of the rabbit
+	addi $a0, $a0, MINUS_WIDTH_BY4
+	addi $a0, $a0, MINUS_WIDTH_BY4
+	addi $a0, $a0, MINUS_WIDTH_BY4
+	addi $a0, $a0, MINUS_WIDTH_BY4
+	addi $a0, $a0, MINUS_WIDTH_BY4
+	addi $a0, $a0, MINUS_WIDTH_BY4
+	addi $a0, $a0, MINUS_WIDTH_BY4
+	
+	move $v1, $a0
 	jr $ra
