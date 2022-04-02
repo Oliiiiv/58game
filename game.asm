@@ -320,7 +320,7 @@ mainLoop:
 	
 refresh:
 	li $v0, 32
-	addi $a0, $a0, 40
+	addi $a0, $a0, 10
 	syscall
 	
 	j mainLoop
@@ -372,16 +372,25 @@ respond_a:
         
         #refresh the picture of rabbit
         #make the current position black
-        move $a0, $t0
+        addi $sp, $sp, -4
+        sw $ra, 0($sp)	#push the old $ra into the stack
+        addi $sp, $sp, -4
+        sw $t0, 0($sp)	#push the address of rabbit
         jal clear_rabbit
+        
         #draw the new rabbit
         addi $t0, $t0, -4
-        
-        move $a0, $t0
+
+        addi $sp, $sp, -4
+        sw $t0, 0($sp)	#push the address of rabbit
         jal DrawRabFunc
         
         lw $t0, 0($sp)	#use s0 to store the address of rabbit
         addi $sp, $sp, 4
+        
+        lw $ra, 0($sp)	#pop out the old $ra
+        addi $sp, $sp, 4
+        
         j k_re
         
 respond_d:
@@ -396,16 +405,25 @@ respond_d:
         
         #refresh the picture of rabbit
         #make the current position black
-        move $a0, $t0
+        addi $sp, $sp, -4
+        sw $ra, 0($sp)	#push the old $ra into the stack
+        addi $sp, $sp, -4
+        sw $t0, 0($sp)	#push the address of rabbit
         jal clear_rabbit
-        #draw the new rabbit
-        addi $t0, $t0, 4	#update the new addr of rabbit
         
-        move $a0, $t0	#push the address of rabbit
+        #draw the new rabbit
+        addi $t0, $t0, 4
+
+        addi $sp, $sp, -4
+        sw $t0, 0($sp)	#push the address of rabbit
         jal DrawRabFunc
         
         lw $t0, 0($sp)	#use s0 to store the address of rabbit
         addi $sp, $sp, 4
+        
+        lw $ra, 0($sp)	#pop out the old $ra
+        addi $sp, $sp, 4
+        
         j k_re
 respond_w:
 
@@ -414,13 +432,14 @@ respond_restart:
 
 ##############END OF KEY CONTROL###############
 clear_rabbit:
-	lw $t0, 0($a0)
+	lw $t0, 0($sp)
+	addi $sp, $sp, 4
 	li $t2, BLACK
 
 ClearRabbit:
 	#row 1
-	sw $t0, 8($t4)
-	sw $t0, 16($t4)
+	sw $t2, 8($t4)
+	sw $t2, 16($t4)
 
 	addi $t4, $t4, WIDTH_BY4	#row 2
 	sw $t2, 8($t4)
@@ -479,69 +498,72 @@ ClearRabbit:
 	
 	
 DrawRabFunc:
-	#calculate the address and store in t4
-	
+	#pop the addr and store in t4
+	lw $t4, 0($sp)
+	addi $sp, $sp, 4
+
 	li $t0, RAB_BASE_COLOR
 	li $t1, RAB_EYE_COLOR
 	li $t2, RAB_EAR_COLOR
 	li $t3, RAB_CHEEK_COLOR
 
 	#row 1
-	sw $t0, 8($a0)
-	sw $t0, 16($a0)
+	sw $t0, 8($t4)
+	sw $t0, 16($t4)
 
-	addi $a0, $a0, WIDTH_BY4	#row 2
-	sw $t2, 8($a0)
-	sw $t2, 16($a0)
+	addi $t4, $t4, WIDTH_BY4	#row 2
+	sw $t2, 8($t4)
+	sw $t2, 16($t4)
 
-	addi $a0, $a0, WIDTH_BY4	#row 3
-	sw $t2, 8($a0)
-	sw $t2, 16($a0)
+	addi $t4, $t4, WIDTH_BY4	#row 3
+	sw $t2, 8($t4)
+	sw $t2, 16($t4)
+
+	addi $t4, $t4, WIDTH_BY4	#row 4
+	sw $t0, 4($t4)
+	sw $t0, 8($t4)
+	sw $t0, 12($t4)
+	sw $t0, 16($t4)
+	sw $t0, 20($t4)
+
+	addi $t4, $t4, WIDTH_BY4	#row 5
+	sw $t0, 4($t4)
+	sw $t0, 8($t4)
+	sw $t0, 12($t4)
+	sw $t0, 16($t4)
+	sw $t0, 20($t4)
+
+	addi $t4, $t4, WIDTH_BY4	#row 6
+	sw $t0, 4($t4)
+	sw $t1, 8($t4)
+	sw $t0, 12($t4)
+	sw $t1, 16($t4)
+	sw $t0, 20($t4)
+
+	addi $t4, $t4, WIDTH_BY4	#row 7
+	sw $t0, 0($t4)
+	sw $t3, 4($t4)
+	sw $t0, 8($t4)
+	sw $t0, 12($t4)
+	sw $t0, 16($t4)
+	sw $t3, 20($t4)
+
+	addi $t4, $t4, WIDTH_BY4	#row 8
+	sw $t0, 4($t4)
+	sw $t0, 8($t4)
+	sw $t0, 12($t4)
+	sw $t0, 16($t4)
+	sw $t0, 20($t4)
 	
-	addi $a0, $a0, WIDTH_BY4	#row 4
-	sw $t0, 4($a0)
-	sw $t0, 8($a0)
-	sw $t0, 12($a0)
-	sw $t0, 16($a0)
-	sw $t0, 20($a0)
+	addi $t4, $t4, MINUS_WIDTH_BY4
+	addi $t4, $t4, MINUS_WIDTH_BY4
+	addi $t4, $t4, MINUS_WIDTH_BY4
+	addi $t4, $t4, MINUS_WIDTH_BY4
+	addi $t4, $t4, MINUS_WIDTH_BY4
+	addi $t4, $t4, MINUS_WIDTH_BY4
+	addi $t4, $t4, MINUS_WIDTH_BY4
 	
-	addi $a0, $a0, WIDTH_BY4	#row 5
-	sw $t0, 4($a0)
-	sw $t0, 8($a0)
-	sw $t0, 12($a0)
-	sw $t0, 16($a0)
-	sw $t0, 20($a0)
-	
-	addi $a0, $a0, WIDTH_BY4	#row 6
-	sw $t0, 4($a0)
-	sw $t1, 8($a0)
-	sw $t0, 12($a0)
-	sw $t1, 16($a0)
-	sw $t0, 20($a0)
-	
-	addi $a0, $a0, WIDTH_BY4	#row 7
-	sw $t0, 0($a0)
-	sw $t3, 4($a0)
-	sw $t0, 8($a0)
-	sw $t0, 12($a0)
-	sw $t0, 16($a0)
-	sw $t3, 20($a0)
-	
-	addi $a0, $a0, WIDTH_BY4	#row 8
-	sw $t0, 4($a0)
-	sw $t0, 8($a0)
-	sw $t0, 12($a0)
-	sw $t0, 16($a0)
-	sw $t0, 20($a0)
-	
-	#revise and return the new addtress of the rabbit
-	addi $a0, $a0, MINUS_WIDTH_BY4
-	addi $a0, $a0, MINUS_WIDTH_BY4
-	addi $a0, $a0, MINUS_WIDTH_BY4
-	addi $a0, $a0, MINUS_WIDTH_BY4
-	addi $a0, $a0, MINUS_WIDTH_BY4
-	addi $a0, $a0, MINUS_WIDTH_BY4
-	addi $a0, $a0, MINUS_WIDTH_BY4
-	
-	move $v1, $a0
-	jr $ra
+	addi $sp, $sp, -4
+        sw $t4, 0($sp)	#push the address of rabbit
+        
+	jr $ra 
