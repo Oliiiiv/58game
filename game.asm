@@ -50,12 +50,9 @@
 .eqv	MINUS_WIDTH_BY4	-256
 .eqv	MINUS_HEIGHT_BY4	-256
 
-.eqv	RAB_WIDTH	6
-.eqv	RAB_HEIGHT	8
-.eqv	RAB_WIDTH_BY4	24
-.eqv	RAB_HEIGHT_BY4	32
-
 .eqv	TAIL_OFFSET	1536
+.eqv	RAB_RIGHT_DOWN_OFFSET	1812
+.eqv	RAB_LEFT_DOWN_OFFSET	1792
 
 #about color
 .eqv	FIRE_COLOR	0x00F06D30
@@ -318,9 +315,54 @@ mainLoop:
 	lw $s0, 0($sp)	
 	addi $sp, $sp, 4
 	
+gravity:
+	move $t0, $s0
+	#if it is on a platform just go to refresh
+	#left
+	move $t3, $zero
+	addi $t3, $t3, RAB_LEFT_DOWN_OFFSET
+	add $t3, $t0, $t3	#t3 stores the left down corner of the rabbit
+	
+	li $t6, WIDTH_BY4
+	add $t6, $t6, $t3
+	lw $t5, 0($t6)	#t5 stores the color of t6
+	beq $t5, TIMOTHY_COLOR, refresh
+	
+	#right
+	move $t3, $zero
+	addi $t3, $t3, RAB_RIGHT_DOWN_OFFSET
+	add $t3, $t0, $t3	#t3 stores the right down corner of the rabbit
+	
+	li $t6, WIDTH_BY4
+	add $t6, $t6, $t3
+	lw $t5, 0($t6)	#t5 stores the color of t6
+	beq $t5, TIMOTHY_COLOR, refresh
+	
+	#if it is at the bottom line just go to refresh
+	li $t1, LAND_RIGHT_CORNER
+	addi $t1, $t1, MINUS_WIDTH_BY4
+	bge $t0, $t1, refresh
+
+	#if rabbit is not on platform or on land, gravity works.
+        addi $sp, $sp, -4
+        sw $t0, 0($sp)	#push the address of rabbit
+        jal clear_rabbit
+        
+        #draw the new rabbit
+        addi $t0, $t0, WIDTH_BY4
+
+        addi $sp, $sp, -4
+        sw $t0, 0($sp)	#push the address of rabbit
+        jal DrawRabFunc
+        
+        lw $t0, 0($sp)	
+        addi $sp, $sp, 4
+        
+        addi $s0, $s0, WIDTH_BY4
+        
 refresh:
 	li $v0, 32
-	addi $a0, $a0, 10
+	addi $a0, $a0, 20
 	syscall
 	
 	j mainLoop
@@ -353,11 +395,10 @@ k_event: #Branch to correponding keystroke event
         li $t8, RAB_EYE_COLOR
         li $t9, RAB_EAR_COLOR
         #press r to restart
-        beq $t2, 0x70, respond_restart
-        beq $s2, -1, k_re
-        beq $t2, 0x61, respond_a
-        beq $t2, 0x64, respond_d
-        beq $t2, 0x77, respond_w
+        beq $t2, 0x70, respond_restart	#this is p
+        beq $t2, 0x61, respond_a	#go left
+        beq $t2, 0x64, respond_d	#go right
+        beq $t2, 0x77, respond_w	#jump/move up 2 lines
         j k_re
         
 respond_a:
@@ -377,7 +418,7 @@ respond_a:
         addi $sp, $sp, -4
         sw $t0, 0($sp)	#push the address of rabbit
         jal clear_rabbit
-        
+      
         #draw the new rabbit
         addi $t0, $t0, -4
 
@@ -425,14 +466,50 @@ respond_d:
         addi $sp, $sp, 4
         
         j k_re
+        
 respond_w:
+	#if there is a platform upward then is blocked
+	
+	#if is at the ceiling of the screen then is blocked
+	move $t1, $t0
+	addi $t1, $t1, MINUS_WIDTH_BY4
+	addi $t1, $t1, MINUS_WIDTH_BY4
+	addi $t1, $t1, MINUS_WIDTH_BY4
+	
+	li $t2, FRAME_BASE
+	ble $t1, $t2, k_re
+	
+        #refresh the picture of rabbit
+        #make the current position black
+        addi $sp, $sp, -4
+        sw $ra, 0($sp)	#push the old $ra into the stack
+        addi $sp, $sp, -4
+        sw $t0, 0($sp)	#push the address of rabbit
+        jal clear_rabbit
+        
+        #draw the new rabbit
+        addi $t0, $t0, MINUS_WIDTH_BY4
+        addi $t0, $t0, MINUS_WIDTH_BY4
+        addi $t0, $t0, MINUS_WIDTH_BY4
 
-	j k_re
+
+        addi $sp, $sp, -4
+        sw $t0, 0($sp)	#push the address of rabbit
+        jal DrawRabFunc
+        
+        lw $t0, 0($sp)	#use s0 to store the address of rabbit
+        addi $sp, $sp, 4
+        
+        lw $ra, 0($sp)	#pop out the old $ra
+        addi $sp, $sp, 4
+        
+        j k_re
+        
 respond_restart:
 
 ##############END OF KEY CONTROL###############
 clear_rabbit:
-	lw $t0, 0($sp)
+	lw $t4, 0($sp)
 	addi $sp, $sp, 4
 	li $t2, BLACK
 
@@ -494,7 +571,6 @@ ClearRabbit:
 	addi $t4, $t4, MINUS_WIDTH_BY4
 	
 	jr $ra
-	
 	
 	
 DrawRabFunc:
