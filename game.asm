@@ -41,7 +41,8 @@
 .eqv	LAND_RIGHT_CORNER	0x1000B8FC
 .eqv	RAB_INITIAL	0x10008014
 
-.eqv	OOPS_START_IDX	0x10009C44
+.eqv	OOPS_START_IDX	0x10009B40
+.eqv	WIN_START_IDX	0x10009B34
 
 #about graph size
 .eqv	WIDTH	64
@@ -77,6 +78,9 @@
 .eqv	BLACK	0x00000000
 .eqv	IMMUNE_COLOR	0x00DE86C1
 .eqv	GRAY	0x009E9E9E
+
+.eqv	GOAL_COLOR	0x004A8D46
+.eqv	WIN_COLOR	0x00DFA1CF
 
 .text
 .globl main
@@ -281,7 +285,7 @@ DrawTimothy:
 	li $t2, LAND_RIGHT_CORNER
 	addi $t2, $t2, -8
 	#color
-	li $t0, TIMOTHY_COLOR
+	li $t0, GOAL_COLOR
 	
 	#begin to draw
 	#row 1
@@ -368,7 +372,9 @@ gravity:
 	add $t6, $t6, $t3
 	lw $t5, 0($t6)	#t5 stores the color of t6
 	beq $t5, TIMOTHY_COLOR, refresh
-
+	beq $t5, ENEMY_BASE_COLOR, refresh
+	beq $t5, ENEMY_EYE_COLOR, refresh
+	
 	#right
 	move $t3, $zero
 	addi $t3, $t3, RAB_RIGHT_DOWN_OFFSET
@@ -410,7 +416,7 @@ about_crash:
 	
 	lw $s2, 0($sp)	#pop the hp of rabbit
 	addi $sp, $sp, 4
-
+	
 refresh:
 	li $v0, 32
 	addi $a0, $a0, 1
@@ -587,34 +593,50 @@ respond_a:
        	move $t8, $t0
         lw $t9, -4($t8)
         beq $t9, TIMOTHY_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_re
+        beq $t9, ENEMY_EYE_COLOR, k_re
         addi $t8, $t8, WIDTH_BY4
        
         lw $t9, -4($t8)
         beq $t9, TIMOTHY_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_re
+        beq $t9, ENEMY_EYE_COLOR, k_re
         addi $t8, $t8, WIDTH_BY4
   
         lw $t9, -4($t8)
         beq $t9, TIMOTHY_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_re
+        beq $t9, ENEMY_EYE_COLOR, k_re
         addi $t8, $t8, WIDTH_BY4
      
         lw $t9, -4($t8)
         beq $t9, TIMOTHY_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_re
+        beq $t9, ENEMY_EYE_COLOR, k_re
         addi $t8, $t8, WIDTH_BY4
      
         lw $t9, -4($t8)
         beq $t9, TIMOTHY_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_re
+        beq $t9, ENEMY_EYE_COLOR, k_re
         addi $t8, $t8, WIDTH_BY4
        
         lw $t9, -4($t8)
         beq $t9, TIMOTHY_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_re
+        beq $t9, ENEMY_EYE_COLOR, k_re
         addi $t8, $t8, WIDTH_BY4
         
         lw $t9, -4($t8)
         beq $t9, TIMOTHY_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_re
+        beq $t9, ENEMY_EYE_COLOR, k_re
         addi $t8, $t8, WIDTH_BY4
        
         lw $t9, -4($t8)
         beq $t9, TIMOTHY_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_re
+        beq $t9, ENEMY_EYE_COLOR, k_re
         addi $t8, $t8, WIDTH_BY4
     
         
@@ -661,34 +683,58 @@ respond_d:
         move $t8, $t0
         lw $t9, 24($t8)
         beq $t9, TIMOTHY_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_re
+        beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
 
         lw $t9, 24($t8)
         beq $t9, TIMOTHY_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_re
+        beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
         
         lw $t9, 24($t8)
         beq $t9, TIMOTHY_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_re
+        beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
         
         lw $t9, 24($t8)
         beq $t9, TIMOTHY_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_re
+        beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
         
         lw $t9, 24($t8)
         beq $t9, TIMOTHY_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_re
+        beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
         
         lw $t9, 24($t8)
         beq $t9, TIMOTHY_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_re
+        beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
         
         lw $t9, 24($t8)
         beq $t9, TIMOTHY_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_re
+        beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
         
         lw $t9, 24($t8)
         beq $t9, TIMOTHY_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_re
+        beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, GOAL_COLOR, win
 
         #refresh the picture of rabbit
         #make the current position black
@@ -1025,7 +1071,7 @@ clear_screen:
 	
 draw_black:
 	li $t1, BLACK
-	sw $t1, 0($t4)
+	sw $t1, 4($t4)
 	addi $t4, $t4, 4
 	ble $t4, DOWN_RIGHT_CORNER, draw_black
 EndClear:
@@ -1033,13 +1079,116 @@ EndClear:
 
 ######################GG##########################
 gg:
-	jal clear_screen
-	
 	li $t7, GRAY
-	li $t1, OOPS_START_IDX
-DrawOops:
-	sw $t7, 0($t1)
+	addi $t8, $zero, OOPS_START_IDX
+	jal clear_screen
+	#row 1
+	sw $t7, 4($t8)
+	sw $t7, 8($t8)
 	
+	sw $t7, 24($t8)
+	sw $t7, 28($t8)
 	
+	sw $t7, 40($t8)
+	sw $t7, 44($t8)
+	sw $t7, 48($t8)
+	
+	sw $t7, 64($t8)
+	sw $t7, 68($t8)
+	sw $t7, 72($t8)
+	
+	addi $t8, $t8, WIDTH_BY4	#row 2
+	sw $t7, 0($t8)
+	sw $t7, 12($t8)
+	
+	sw $t7, 20($t8)
+	sw $t7, 32($t8)
+	
+	sw $t7, 40($t8)
+	sw $t7, 52($t8)
+	sw $t7, 60($t8)
+	
+	addi $t8, $t8, WIDTH_BY4	#row 3
+	sw $t7, 0($t8)
+	sw $t7, 12($t8)
+	
+	sw $t7, 20($t8)
+	sw $t7, 32($t8)
+	
+	sw $t7, 40($t8)
+	sw $t7, 44($t8)
+	sw $t7, 48($t8)
+
+	sw $t7, 64($t8)
+	sw $t7, 68($t8)
+	
+	addi $t8, $t8, WIDTH_BY4	#row 4
+	sw $t7, 0($t8)
+	sw $t7, 12($t8)
+	
+	sw $t7, 20($t8)
+	sw $t7, 32($t8)
+	
+	sw $t7, 40($t8)
+	sw $t7, 72($t8)
+	
+	addi $t8, $t8, WIDTH_BY4	#row 5
+	sw $t7, 4($t8)
+	sw $t7, 8($t8)
+	
+	sw $t7, 24($t8)
+	sw $t7, 28($t8)
+	
+	sw $t7, 40($t8)
+	
+	sw $t7, 60($t8)
+	sw $t7, 64($t8)
+	sw $t7, 68($t8)
+	sw $t7, 84($t8)
+	sw $t7, 100($t8)
+	sw $t7, 116($t8)
 	#wait for the keyboard respond
-	j respond_restart
+ReceiveRestart:
+	#check whether the user has pressed any key
+        li $t3, 0xffff0000 
+        lw $t2, 0($t3) 
+        beq $t2, 1, restartCheck
+restartCheck: #Branch to correponding keystroke event
+        lw $t2, 4($t3)
+        beq $t2, 0x70, respond_restart	#this is p
+
+RedrawOops:
+	#else remain this page
+	li $v0, 32
+	li $a0, 50
+	syscall
+	j gg
+	
+###################WON FUNC####################
+win:
+	jal clear_screen
+DrawWin:
+	li $t6, WIN_COLOR
+	li $t7, WIN_START_IDX
+	
+	sw $t6, 0($t7)
+	sw $t6, 20($t7)
+	
+	sw $t6, 28($t7)
+Receivep:
+	#check whether the user has pressed any key
+        li $t3, 0xffff0000 
+        lw $t2, 0($t3) 
+        beq $t2, 1, pCheck
+pCheck: #Branch to correponding keystroke event
+        lw $t2, 4($t3)
+        beq $t2, 0x70, respond_restart	#this is p
+
+RedrawWin:
+	#else remain this page
+	li $v0, 32
+	li $a0, 50
+	syscall
+	j win
+		
+	
