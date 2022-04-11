@@ -941,57 +941,57 @@ respond_a:
        	move $t8, $t0
         lw $t9, -4($t8)
         beq $t9, TIMOTHY_COLOR, k_re
-        beq $t9, ENEMY_BASE_COLOR, k_re
-        beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_crash
+        beq $t9, ENEMY_EYE_COLOR, k_crash
         beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
        
         lw $t9, -4($t8)
         beq $t9, TIMOTHY_COLOR, k_re
-        beq $t9, ENEMY_BASE_COLOR, k_re
-        beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_crash
+        beq $t9, ENEMY_EYE_COLOR, k_crash
         beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
   
         lw $t9, -4($t8)
         beq $t9, TIMOTHY_COLOR, k_re
-        beq $t9, ENEMY_BASE_COLOR, k_re
-        beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_crash
+        beq $t9, ENEMY_EYE_COLOR, k_crash
         beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
      
         lw $t9, -4($t8)
         beq $t9, TIMOTHY_COLOR, k_re
-        beq $t9, ENEMY_BASE_COLOR, k_re
-        beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_crash
+        beq $t9, ENEMY_EYE_COLOR, k_crash
         beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
      
         lw $t9, -4($t8)
         beq $t9, TIMOTHY_COLOR, k_re
-        beq $t9, ENEMY_BASE_COLOR, k_re
-        beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_crash
+        beq $t9, ENEMY_EYE_COLOR, k_crash
         beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
        
         lw $t9, -4($t8)
         beq $t9, TIMOTHY_COLOR, k_re
-        beq $t9, ENEMY_BASE_COLOR, k_re
-        beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_crash
+        beq $t9, ENEMY_EYE_COLOR, k_crash
         beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
         
         lw $t9, -4($t8)
         beq $t9, TIMOTHY_COLOR, k_re
-        beq $t9, ENEMY_BASE_COLOR, k_re
-        beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_crash
+        beq $t9, ENEMY_EYE_COLOR, k_crash
         beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
        
         lw $t9, -4($t8)
         beq $t9, TIMOTHY_COLOR, k_re
-        beq $t9, ENEMY_BASE_COLOR, k_re
-        beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_crash
+        beq $t9, ENEMY_EYE_COLOR, k_crash
         beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
     
@@ -1039,57 +1039,57 @@ respond_d:
         move $t8, $t0
         lw $t9, 24($t8)
         beq $t9, TIMOTHY_COLOR, k_re
-        beq $t9, ENEMY_BASE_COLOR, k_re
-        beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_crash
+        beq $t9, ENEMY_EYE_COLOR, k_crash
         beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
 
         lw $t9, 24($t8)
         beq $t9, TIMOTHY_COLOR, k_re
-        beq $t9, ENEMY_BASE_COLOR, k_re
-        beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_crash
+        beq $t9, ENEMY_EYE_COLOR, k_crash
         beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
         
         lw $t9, 24($t8)
         beq $t9, TIMOTHY_COLOR, k_re
-        beq $t9, ENEMY_BASE_COLOR, k_re
-        beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_crash
+        beq $t9, ENEMY_EYE_COLOR, k_crash
         beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
         
         lw $t9, 24($t8)
         beq $t9, TIMOTHY_COLOR, k_re
-        beq $t9, ENEMY_BASE_COLOR, k_re
-        beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_crash
+        beq $t9, ENEMY_EYE_COLOR, k_crash
         beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
         
         lw $t9, 24($t8)
         beq $t9, TIMOTHY_COLOR, k_re
-        beq $t9, ENEMY_BASE_COLOR, k_re
-        beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_crash
+        beq $t9, ENEMY_EYE_COLOR, k_crash
         beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
         
         lw $t9, 24($t8)
         beq $t9, TIMOTHY_COLOR, k_re
-        beq $t9, ENEMY_BASE_COLOR, k_re
-        beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_crash
+        beq $t9, ENEMY_EYE_COLOR, k_crash
         beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
         
         lw $t9, 24($t8)
         beq $t9, TIMOTHY_COLOR, k_re
-        beq $t9, ENEMY_BASE_COLOR, k_re
-        beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_crash
+        beq $t9, ENEMY_EYE_COLOR, k_crash
         beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
         
         lw $t9, 24($t8)
         beq $t9, TIMOTHY_COLOR, k_re
-        beq $t9, ENEMY_BASE_COLOR, k_re
-        beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, ENEMY_BASE_COLOR, k_crash
+        beq $t9, ENEMY_EYE_COLOR, k_crash
         beq $t9, GOAL_COLOR, win
 
         #refresh the picture of rabbit
@@ -1229,7 +1229,10 @@ LoopIfPlatform4:
 
 	addi $s5, $s5, -1
         j k_re
-        
+      
+k_crash:
+	addi $s2, $s2, -1
+	j k_re
 cannotJump:
 	li $s5, 2
 	j k_re
@@ -1367,6 +1370,8 @@ DrawEnemyFunc:
 	addi $t2, $t2, MINUS_WIDTH_BY4
 	addi $t2, $t2, -20
 	#color
+	move $t0, $zero
+	move $t1, $zero
 	li $t0, ENEMY_BASE_COLOR
 	li $t1, ENEMY_EYE_COLOR
 	
@@ -1404,9 +1409,10 @@ DrawMovEnemyFunc:
 	addi $t2, $t2, MINUS_WIDTH_BY4
 	addi $t2, $t2, -20
 	#color
+	move $t0, $zero
+	move $t1, $zero
 	li $t0, ENEMY_BASE_COLOR
 	li $t1, ENEMY_EYE_COLOR
-	
 	#begin to draw
 	#row 1
 	sw $t0, 0($t2)
