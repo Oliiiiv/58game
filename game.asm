@@ -22,6 +22,8 @@
 # 2. fail condition
 # 3. won condition
 # 4. moving platform
+# 5. moving object (enemy)
+# 6. double jump
 # 
 # Link to video demonstration for final submission: 
 # - (insert YouTube / MyMedia / other URL here). Make sure we can view it! 
@@ -45,6 +47,7 @@
 
 .eqv	OOPS_START_IDX	0x10009B40
 .eqv	WIN_START_IDX	0x10009B34
+.eqv	MOVE_ENEMY_INIT_ADDR	0x10009740
 
 #about graph size
 .eqv	WIDTH	64
@@ -88,6 +91,11 @@
 .eqv	GOAL_COLOR	0x004A8D46
 .eqv	WIN_COLOR	0x00DFA1CF
 
+.data
+ENEMY_DIR:	.word	1
+ENEMY_MOVING_TIMES:	.word	32
+
+
 .text
 .globl main
 main:
@@ -96,8 +104,19 @@ main:
 	li $s1, SECOND_PLATFORM	#the second platform address(the moving one)
 	li $s2, 3	#health
 	li $s3, -1	#platform moving direction
-	li $s4, 20	#platform movw time
+	li $s4, 20	#platform move time
 	li $s5, 2	#for double jump
+	li $s6, MOVE_ENEMY_INIT_ADDR	#initial address of moving enemy
+	
+	la $t5, ENEMY_DIR
+	lw $t6, 0($t5)
+	li $t6, 1
+	sw $t6, 0($t5)
+	
+	la $t5, ENEMY_MOVING_TIMES
+	lw $t6, 0($t5)
+	li $t6, 32
+	sw $t6, 0($t5)
 ################Draw Land###############
 DrawLand:
 	li $t1, BOTTOM_LINE
@@ -388,6 +407,19 @@ movePlatform:
 	move $s1, $t2
 	move $s3, $t4
 	
+moveEnemy:
+	move $t3, $s6	#load the address of the beginning of enemy
+	addi $sp, $sp, -4
+	sw $t3, 0($sp)
+	jal clear_enemy
+	
+	addi $sp, $sp, -4
+	sw $t3, 0($sp)
+	jal moveEnemyFunc
+	lw $t3, 0($sp)	#pop the new address of enemy
+	addi $sp, $sp, 4
+	
+	move $s6, $t3
 gravity:
 	move $t0, $s0
 	#if it is on a platform just go to refresh
@@ -458,6 +490,88 @@ END:
 	syscall
 	
 ###################END MAIN FUNC##################
+###############MOVE ENEMY FUNCS################
+moveEnemyFunc:
+	lw $t4, 0($sp)	#pop the address of enemy
+	addi $sp, $sp, 4
+	la $t5, ENEMY_DIR
+	lw $t3, 0($t5)	#t3 stores the direction of enemy
+	la $t9, ENEMY_MOVING_TIMES
+	lw $t6, 0($t9)	#t6 stores enemy moving time
+	
+	li $t0, ENEMY_BASE_COLOR
+	li $t1, ENEMY_EYE_COLOR
+	
+ifChangeDir:
+	#if platform reach the edge then chan direction
+	beqz $t6, change_dir
+	j not_change
+change_dir:
+	beq $t3, 1, changeToLeft
+	beq $t3, -1, changeToRight
+	#else just move the platform
+not_change:
+	beq $t3, 1, move_right
+	beq $t3, -1, move_left	
+	
+move_right:
+	addi $t8, $t4, 4
+	addi $t8, $t8, WIDTH_BY4
+	addi $t8, $t8, WIDTH_BY4
+	addi $t8, $t8, WIDTH_BY4
+	addi $t8, $t8, 20
+	
+	addi $t4, $t4, 4
+	
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)	#push old ra
+	addi $sp, $sp, -4
+	sw $t8, 0($sp)	#push the adjusted address
+	jal DrawMovEnemyFunc
+	
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
+	
+	addi $t6, $t6, -1
+	j end_move
+move_left:
+	addi $t8, $t4, -4
+	addi $t8, $t8, WIDTH_BY4
+	addi $t8, $t8, WIDTH_BY4
+	addi $t8, $t8, WIDTH_BY4
+	addi $t8, $t8, 20
+	
+	addi $t4, $t4, -4
+	
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
+	addi $sp, $sp, -4
+	sw $t8, 0($sp)
+	jal DrawMovEnemyFunc
+	
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
+	
+	addi $t6, $t6, -1
+	j end_move
+changeToLeft:
+	#in this case platform will not move
+	addi $t3, $zero, -1
+	li $t6, 32
+	j end_move
+changeToRight:
+	addi $t3, $zero, 1
+	li $t6, 32
+	j end_move
+end_move:
+	la $t5, ENEMY_DIR
+	sw $t3, 0($t5)
+	la $t0, ENEMY_MOVING_TIMES
+	sw $t6, 0($t9)
+	
+	addi $sp, $sp, -4
+	sw $t4, 0($sp)	#push the new address
+	jr $ra
 ###############MOVE PLATFORM FUNCS################
 movePLatformFunc:
 	lw $t3, 0($sp)	#pop the direction of platform
@@ -517,77 +631,232 @@ if_crash:
 	lw $t2, 0($sp)	#pop the hp of rabbit
 	addi $sp, $sp, 4
 	
+	move $t9, $zero
+	move $t6, $zero
 	addi $t0, $t0, MINUS_WIDTH_BY4	#the row above the rabbit
+	lw $t9, 8($t0)
+	beq $t9, ENEMY_BASE_COLOR, is_crashed
+	beq $t9, ENEMY_EYE_COLOR, is_crashed
+	lw $t9, 16($t0)
+	beq $t9, ENEMY_BASE_COLOR, is_crashed
+	beq $t9, ENEMY_EYE_COLOR, is_crashed
+	
+	addi $t0, $t0, WIDTH_BY4	#row1
+	lw $t9, 0($t0)
+	beq $t9, ENEMY_BASE_COLOR, is_crashed
+	beq $t9, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 4($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
 	lw $t6, 8($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 12($t0)
 	beq $t6, ENEMY_BASE_COLOR, is_crashed
 	beq $t6, ENEMY_EYE_COLOR, is_crashed
 	lw $t6, 16($t0)
 	beq $t6, ENEMY_BASE_COLOR, is_crashed
 	beq $t6, ENEMY_EYE_COLOR, is_crashed
-	
-	addi $t0, $t0, WIDTH_BY4	#row1
-	lw $t6, 4($t0)
-	beq $t6, ENEMY_BASE_COLOR, is_crashed
-	beq $t6, ENEMY_EYE_COLOR, is_crashed
 	lw $t6, 20($t0)
 	beq $t6, ENEMY_BASE_COLOR, is_crashed
 	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t9, 24($t0)
+	beq $t9, ENEMY_BASE_COLOR, is_crashed
+	beq $t9, ENEMY_EYE_COLOR, is_crashed
 	
 	addi $t0, $t0, WIDTH_BY4	#row2
+	lw $t9, 0($t0)
+	beq $t9, ENEMY_BASE_COLOR, is_crashed
+	beq $t9, ENEMY_EYE_COLOR, is_crashed
 	lw $t6, 4($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 8($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 12($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 16($t0)
 	beq $t6, ENEMY_BASE_COLOR, is_crashed
 	beq $t6, ENEMY_EYE_COLOR, is_crashed
 	lw $t6, 20($t0)
 	beq $t6, ENEMY_BASE_COLOR, is_crashed
 	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	
+	lw $t9, 24($t0)
+	beq $t9, ENEMY_BASE_COLOR, is_crashed
+	beq $t9, ENEMY_EYE_COLOR, is_crashed
 	
 	addi $t0, $t0, WIDTH_BY4	#row3
-	lw $t6, 4($t0)
+	lw $t9, 4($t0)
+	beq $t9, ENEMY_BASE_COLOR, is_crashed
+	beq $t9, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 0($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 8($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 12($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 16($t0)
 	beq $t6, ENEMY_BASE_COLOR, is_crashed
 	beq $t6, ENEMY_EYE_COLOR, is_crashed
 	lw $t6, 20($t0)
 	beq $t6, ENEMY_BASE_COLOR, is_crashed
 	beq $t6, ENEMY_EYE_COLOR, is_crashed
 	
+	lw $t9, 20($t0)
+	beq $t9, ENEMY_BASE_COLOR, is_crashed
+	beq $t9, ENEMY_EYE_COLOR, is_crashed
+	
 	addi $t0, $t0, WIDTH_BY4	#row4
-	lw $t6, -4($t0)
+	lw $t9, -4($t0)
+	beq $t9, ENEMY_BASE_COLOR, is_crashed
+	beq $t9, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 0($t0)
 	beq $t6, ENEMY_BASE_COLOR, is_crashed
 	beq $t6, ENEMY_EYE_COLOR, is_crashed
-	lw $t6, 24($t0)
+	lw $t6, 4($t0)
 	beq $t6, ENEMY_BASE_COLOR, is_crashed
 	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 8($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 12($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 16($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 20($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	
+	lw $t9, 24($t0)
+	beq $t9, ENEMY_BASE_COLOR, is_crashed
+	beq $t9, ENEMY_EYE_COLOR, is_crashed
+	lw $t9, 28($t0)
+	beq $t9, ENEMY_BASE_COLOR, is_crashed
+	beq $t9, ENEMY_EYE_COLOR, is_crashed
 	
 	addi $t0, $t0, WIDTH_BY4	#row5
-	lw $t6, -4($t0)
+	lw $t9, -4($t0)
+	beq $t9, ENEMY_BASE_COLOR, is_crashed
+	beq $t9, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 0($t0)
 	beq $t6, ENEMY_BASE_COLOR, is_crashed
 	beq $t6, ENEMY_EYE_COLOR, is_crashed
-	lw $t6, 24($t0)
+	lw $t6, 4($t0)
 	beq $t6, ENEMY_BASE_COLOR, is_crashed
 	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 8($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 12($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 16($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 20($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	
+	lw $t9, 24($t0)
+	beq $t9, ENEMY_BASE_COLOR, is_crashed
+	beq $t9, ENEMY_EYE_COLOR, is_crashed
 	
 	addi $t0, $t0, WIDTH_BY4	#row6
-	lw $t6, -4($t0)
+	lw $t9, -4($t0)
+	beq $t9, ENEMY_BASE_COLOR, is_crashed
+	beq $t9, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 0($t0)
 	beq $t6, ENEMY_BASE_COLOR, is_crashed
 	beq $t6, ENEMY_EYE_COLOR, is_crashed
-	lw $t6, 24($t0)
+	lw $t6, 4($t0)
 	beq $t6, ENEMY_BASE_COLOR, is_crashed
 	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 8($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 12($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 16($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 20($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t9, 24($t0)
+	beq $t9, ENEMY_BASE_COLOR, is_crashed
+	beq $t9, ENEMY_EYE_COLOR, is_crashed
+	lw $t9, 28($t0)
+	beq $t9, ENEMY_BASE_COLOR, is_crashed
+	beq $t9, ENEMY_EYE_COLOR, is_crashed
 	
 	addi $t0, $t0, WIDTH_BY4	#row7
-	lw $t6, -4($t0)
+	lw $t9, -4($t0)
+	beq $t9, ENEMY_BASE_COLOR, is_crashed
+	beq $t9, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 0($t0)
 	beq $t6, ENEMY_BASE_COLOR, is_crashed
 	beq $t6, ENEMY_EYE_COLOR, is_crashed
-	lw $t6, 24($t0)
+	lw $t6, 4($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 8($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 12($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 16($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 20($t0)
 	beq $t6, ENEMY_BASE_COLOR, is_crashed
 	beq $t6, ENEMY_EYE_COLOR, is_crashed
 	
+	lw $t9, 24($t0)
+	beq $t9, ENEMY_BASE_COLOR, is_crashed
+	beq $t9, ENEMY_EYE_COLOR, is_crashed
+	lw $t9, 28($t0)
+	beq $t9, ENEMY_BASE_COLOR, is_crashed
+	beq $t9, ENEMY_EYE_COLOR, is_crashed
+	
 	addi $t0, $t0, WIDTH_BY4	#row8
-	lw $t6, -4($t0)
+	lw $t9, -4($t0)
+	beq $t9, ENEMY_BASE_COLOR, is_crashed
+	beq $t9, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 0($t0)
 	beq $t6, ENEMY_BASE_COLOR, is_crashed
 	beq $t6, ENEMY_EYE_COLOR, is_crashed
-	lw $t6, 24($t0)
+	lw $t6, 4($t0)
 	beq $t6, ENEMY_BASE_COLOR, is_crashed
 	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 8($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 12($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 16($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	lw $t6, 20($t0)
+	beq $t6, ENEMY_BASE_COLOR, is_crashed
+	beq $t6, ENEMY_EYE_COLOR, is_crashed
+	
+	lw $t9, 24($t0)
+	beq $t9, ENEMY_BASE_COLOR, is_crashed
+	beq $t9, ENEMY_EYE_COLOR, is_crashed
+	lw $t9, 28($t0)
+	beq $t9, ENEMY_BASE_COLOR, is_crashed
+	beq $t9, ENEMY_EYE_COLOR, is_crashed
 	
 	addi $t0, $t0, WIDTH_BY4	#the row below the rabbit
 	lw $t6, 0($t0)
@@ -1122,63 +1391,79 @@ DrawEnemyFunc:
 	sw $t0, 0($t2)
 	sw $t0, 4($t2)
 	sw $t0, 8($t2)
-	addi $sp, $sp, 4
 	
 	jr $ra
-	
-##############IMMUNE RABBIT FUNC################
-DrawImmunity:
-	lw $t4, 0($sp)
+##################MOVING ENEMY################	
+DrawMovEnemyFunc:
+	lw $t2, 0($sp)	#pop the address of enemy
 	addi $sp, $sp, 4
-	li $t2, IMMUNE_COLOR
-
+	
+	#adjust the address
+	addi $t2, $t2, MINUS_WIDTH_BY4
+	addi $t2, $t2, MINUS_WIDTH_BY4
+	addi $t2, $t2, MINUS_WIDTH_BY4
+	addi $t2, $t2, -20
+	#color
+	li $t0, ENEMY_BASE_COLOR
+	li $t1, ENEMY_EYE_COLOR
+	
+	#begin to draw
 	#row 1
-	sw $t2, 8($t4)
-	sw $t2, 16($t4)
-	addi $t4, $t4, WIDTH_BY4	#row 2
-	sw $t2, 8($t4)
-	sw $t2, 16($t4)
-	addi $t4, $t4, WIDTH_BY4	#row 3
-	sw $t2, 8($t4)
-	sw $t2, 16($t4)
+	sw $t0, 0($t2)
+	sw $t0, 8($t2)
 	
-	addi $t4, $t4, WIDTH_BY4	#row 4
-	sw $t2, 4($t4)
-	sw $t2, 8($t4)
-	sw $t2, 12($t4)
-	sw $t2, 16($t4)
-	sw $t2, 20($t4)
+	addi $t2, $t2, WIDTH_BY4	#row 2
+	sw $t0, 0($t2)
+	sw $t0, 4($t2)
+	sw $t0, 8($t2)
+	sw $t0, 16($t2)
 	
-	addi $t4, $t4, WIDTH_BY4	#row 5
-	sw $t2, 4($t4)
-	sw $t2, 8($t4)
-	sw $t2, 12($t4)
-	sw $t2, 16($t4)
-	sw $t2, 20($t4)
-	
-	addi $t4, $t4, WIDTH_BY4	#row 6
-	sw $t2, 4($t4)
-	sw $t2, 8($t4)
-	sw $t2, 12($t4)
-	sw $t2, 16($t4)
-	sw $t2, 20($t4)
-	
-	addi $t4, $t4, WIDTH_BY4	#row 7
-	sw $t2, 0($t4)
-	sw $t2, 4($t4)
-	sw $t2, 8($t4)
-	sw $t2, 12($t4)
-	sw $t2, 16($t4)
-	sw $t2, 20($t4)
-	
-	addi $t4, $t4, WIDTH_BY4	#row 8
-	sw $t2, 4($t4)
-	sw $t2, 8($t4)
-	sw $t2, 12($t4)
-	sw $t2, 16($t4)
-	sw $t2, 20($t4)
+	addi $t2, $t2, WIDTH_BY4	#row 3
+	sw $t1, 0($t2)
+	sw $t0, 4($t2)
+	sw $t1, 8($t2)
+	sw $t0, 12($t2)
+	sw $t0, 20($t2)
+	addi $t2, $t2, WIDTH_BY4	#row 4
+	sw $t0, 0($t2)
+	sw $t0, 4($t2)
+	sw $t0, 8($t2)
 	
 	jr $ra
+##################CLEAR ENEMY###################
+clear_enemy:
+	lw $t3, 0($sp)
+	addi $sp, $sp, 4
+	li $t2, BLACK
+	
+	#begin to draw
+	#row 1
+	sw $t2, 0($t3)
+	sw $t2, 8($t3)
+	
+	addi $t3, $t3, WIDTH_BY4	#row 2
+	sw $t2, 0($t3)
+	sw $t2, 4($t3)
+	sw $t2, 8($t3)
+	sw $t2, 16($t3)
+	
+	addi $t3, $t3, WIDTH_BY4	#row 3
+	sw $t2, 0($t3)
+	sw $t2, 4($t3)
+	sw $t2, 8($t3)
+	sw $t2, 12($t3)
+	sw $t2, 20($t3)
+	addi $t3, $t3, WIDTH_BY4	#row 4
+	sw $t2, 0($t3)
+	sw $t2, 4($t3)
+	sw $t2, 8($t3)
+	
+	addi $t3, $t3, MINUS_WIDTH_BY4
+	addi $t3, $t3, MINUS_WIDTH_BY4
+	addi $t3, $t3, MINUS_WIDTH_BY4
+	
+	jr $ra	
+
 #################CLEAR THE SCREEN#################
 clear_screen:
 	li $t4, FRAME_BASE	
