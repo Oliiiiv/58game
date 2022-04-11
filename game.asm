@@ -14,20 +14,20 @@
 # 
 # Which milestones have been reached in this submission? 
 # (See the assignment handout for descriptions of the milestones) 
-# - Milestone 1/2/3 (choose the one the applies) 
+# - Milestone 3 (choose the one the applies) 
 # 
 # Which approved features have been implemented for milestone 3? 
 # (See the assignment handout for the list of additional features) 
-# 1. (fill in the feature, if any) 
-# 2. (fill in the feature, if any) 
-# 3. (fill in the feature, if any) 
-# ... (add more if necessary) 
+# 1. health (heart)
+# 2. fail condition
+# 3. won condition
+# 4. moving platform
 # 
 # Link to video demonstration for final submission: 
 # - (insert YouTube / MyMedia / other URL here). Make sure we can view it! 
 # 
 # Are you OK with us sharing the video with people outside course staff? 
-# - yes / no / yes, and please share this project github link as well! 
+# - yes
 # 
 # Any additional information that the TA needs to know: 
 # - (write here, if any) 
@@ -36,6 +36,8 @@
 #about address/position
 .eqv	FRAME_BASE	0x10008000
 .eqv	FIRST_PLATFORM	0x10008800
+.eqv 	SECOND_PLATFORM	0x1000ABA0
+.eqv 	THIRD_PLATFORM	0x10009B20
 .eqv	BOTTOM_LINE	0x1000BF00
 .eqv	DOWN_RIGHT_CORNER	0x1000BFFC
 .eqv	LAND_RIGHT_CORNER	0x1000B8FC
@@ -62,6 +64,10 @@
 .eqv	RAB_LEFT_DOWN_OFFSET	1792
 .eqv	HP_OFFSET	464
 
+.eqv	FIRST_PLATFORM_LEN	64
+.eqv 	SECOND_PLATFORM_LEN	48
+.eqv	THIRD_PLATFORM_LEN	52
+
 #about color
 .eqv	HEALTH_COLOR	0x00EBBEE3
 
@@ -86,8 +92,12 @@
 .globl main
 main:
 ###########Initialize Data##############
-	li $s2, 3	#health
 	li $s0, RAB_INITIAL	#the initial address of the rabbit
+	li $s1, SECOND_PLATFORM	#the second platform address(the moving one)
+	li $s2, 3	#health
+	li $s3, -1	#platform moving direction
+	li $s4, 20	#platform movw time
+	li $s5, 2	#for double jump
 ################Draw Land###############
 DrawLand:
 	li $t1, BOTTOM_LINE
@@ -150,7 +160,7 @@ LoopDrawLand4:
 ########Generate Float Platform##########
 MakeFloatPlatform:
 	li $t2, FIRST_PLATFORM	#use t2 to store the begin pixel of platforms
-	li $t1, 64
+	li $t1, FIRST_PLATFORM_LEN
 	addi $sp, $sp, -4
 	sw $t1, 0($sp)	#push the length of platform
 	addi $sp, $sp, -4
@@ -160,8 +170,8 @@ MakeFloatPlatform:
 	lw $t2, 0($sp)	#pop the return value: end pixel of the platform
 	addi $sp, $sp, 4
 
-	li $t3, 48
-	li $t2, 0x1000ABA0
+	li $t3, SECOND_PLATFORM_LEN
+	li $t2, SECOND_PLATFORM
 	addi $sp, $sp, -4
 	sw $t3, 0($sp)	#push the length of platform
 	addi $sp, $sp, -4
@@ -175,8 +185,8 @@ MakeFloatPlatform:
 	addi $sp, $sp, -4
 	jal DrawEnemyFunc
 	
-	li $t3, 52
-	li $t2, 0x10009B20
+	li $t3, THIRD_PLATFORM_LEN
+	li $t2, THIRD_PLATFORM
 	addi $sp, $sp, -4
 	sw $t3, 0($sp)	#push the length of platform
 	addi $sp, $sp, -4
@@ -359,7 +369,25 @@ hp_1:
         sw $t3, 40($t2)
         addi $t2, $t2, WIDTH_BY4
         sw $t3, 36($t2)
-
+        
+movePlatform:
+	move $t2, $s1	#t2 stores address of platform
+	move $t4, $s3	#t3 stores moving direction of platform
+	
+	addi $sp, $sp, -4
+	sw $t2, 0($sp)	#push the address of platform
+	addi $sp, $sp, -4
+	sw $t4, 0($sp)	#push the direction of platform
+	jal movePLatformFunc
+	
+	lw $t4, 0($sp)	#pop the direction of platform
+	addi $sp, $sp, 4
+	lw $t2, 0($sp)	#pop the address of platform
+	addi $sp, $sp, 4
+	
+	move $s1, $t2
+	move $s3, $t4
+	
 gravity:
 	move $t0, $s0
 	#if it is on a platform just go to refresh
@@ -384,6 +412,8 @@ gravity:
 	add $t6, $t6, $t3
 	lw $t5, 0($t6)	#t5 stores the color of t6
 	beq $t5, TIMOTHY_COLOR, refresh
+	beq $t5, ENEMY_BASE_COLOR, refresh
+	beq $t5, ENEMY_EYE_COLOR, refresh
 
 	#if it is at the bottom line just go to refresh
 	li $t1, LAND_RIGHT_CORNER
@@ -428,6 +458,55 @@ END:
 	syscall
 	
 ###################END MAIN FUNC##################
+###############MOVE PLATFORM FUNCS################
+movePLatformFunc:
+	lw $t3, 0($sp)	#pop the direction of platform
+	addi $sp, $sp, 4
+	lw $t2, 0($sp)	#pop the address of platform
+	addi $sp, $sp, 4
+	
+	li $t5, TIMOTHY_COLOR
+	li $t8, BLACK
+loopMoveFunc:
+	#if platform reach the edge then chan direction
+	beqz $s4, changeDir
+	j notChange
+changeDir:
+	beq $t3, 1, changeDirToLeft
+	beq $t3, -1, changeDirToRight
+	#else just move the platform
+notChange:
+	beq $t3, 1, moveRight
+	beq $t3, -1, moveLeft	
+	
+moveRight:
+	sw $t8, 0($t2)
+	sw $t5, 52($t2)
+	addi $s4, $s4, -1
+	addi $t2, $t2, 4
+	j endMove
+moveLeft:
+	sw $t5, -4($t2)
+	sw $t8, 52($t2)
+	addi $s4, $s4, -1
+	addi $t2, $t2, -4
+	j endMove
+changeDirToLeft:
+	#in this case platform will not move
+	addi $t3, $zero, -1
+	li $s4, 20
+	j endMove
+changeDirToRight:
+	addi $t3, $zero, 1
+	li $s4, 20
+	j endMove
+endMove:
+	addi $sp, $sp, -4
+	sw $t2, 0($sp)	#push the new address
+	addi $sp, $sp, -4
+	sw $t3, 0($sp)	#push the new direction
+	jr $ra
+####################END MOVE######################
 #if crashed, hp will decrease by 1 and rabbit will
 #show again near the crashed address with 2 seconds
 #immunity.
@@ -595,48 +674,56 @@ respond_a:
         beq $t9, TIMOTHY_COLOR, k_re
         beq $t9, ENEMY_BASE_COLOR, k_re
         beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
        
         lw $t9, -4($t8)
         beq $t9, TIMOTHY_COLOR, k_re
         beq $t9, ENEMY_BASE_COLOR, k_re
         beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
   
         lw $t9, -4($t8)
         beq $t9, TIMOTHY_COLOR, k_re
         beq $t9, ENEMY_BASE_COLOR, k_re
         beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
      
         lw $t9, -4($t8)
         beq $t9, TIMOTHY_COLOR, k_re
         beq $t9, ENEMY_BASE_COLOR, k_re
         beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
      
         lw $t9, -4($t8)
         beq $t9, TIMOTHY_COLOR, k_re
         beq $t9, ENEMY_BASE_COLOR, k_re
         beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
        
         lw $t9, -4($t8)
         beq $t9, TIMOTHY_COLOR, k_re
         beq $t9, ENEMY_BASE_COLOR, k_re
         beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
         
         lw $t9, -4($t8)
         beq $t9, TIMOTHY_COLOR, k_re
         beq $t9, ENEMY_BASE_COLOR, k_re
         beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
        
         lw $t9, -4($t8)
         beq $t9, TIMOTHY_COLOR, k_re
         beq $t9, ENEMY_BASE_COLOR, k_re
         beq $t9, ENEMY_EYE_COLOR, k_re
+        beq $t9, GOAL_COLOR, win
         addi $t8, $t8, WIDTH_BY4
     
         
@@ -759,6 +846,29 @@ respond_d:
         j k_re
 
 respond_w:
+	beq $s5, 2, checkIfOnGround
+	beq $s5, 1, IfPlatformUpward
+	beqz $s5, cannotJump
+checkIfOnGround:
+	move $t8, $t0
+	
+	move $t3, $zero
+	addi $t3, $t3, RAB_LEFT_DOWN_OFFSET
+	add $t3, $t0, $t3	 #t3 stores the left down corner of the rabbit
+ 	li $t6, WIDTH_BY4
+ 	add $t6, $t6, $t3
+ 	lw $t5, 0($t6) #t5 stores the color of t6
+	bne $t5, TIMOTHY_COLOR, k_re
+
+	move $t3, $zero
+ 	addi $t3, $t3, RAB_RIGHT_DOWN_OFFSET
+	add $t3, $t0, $t3 	#t3 stores the right down corner of the rabbit
+
+ 	li $t6, WIDTH_BY4
+ 	add $t6, $t6, $t3
+ 	lw $t5, 0($t6) #t5 stores the color of t6
+ 	bne $t5, TIMOTHY_COLOR, k_re
+
 	#if there is a platform upward then is blocked
 IfPlatformUpward:
 	move $t8, $t0
@@ -848,8 +958,12 @@ LoopIfPlatform4:
         lw $ra, 0($sp)	#pop out the old $ra
         addi $sp, $sp, 4
 
+	addi $s5, $s5, -1
         j k_re
-
+        
+cannotJump:
+	li $s5, 2
+	j k_re
 respond_restart:
 	jal clear_screen
         j main
@@ -1171,10 +1285,112 @@ DrawWin:
 	li $t6, WIN_COLOR
 	li $t7, WIN_START_IDX
 	
+	#row 1
 	sw $t6, 0($t7)
-	sw $t6, 20($t7)
+	sw $t6, 16($t7)
 	
 	sw $t6, 28($t7)
+	sw $t6, 32($t7)
+	
+	sw $t6, 44($t7)
+	sw $t6, 56($t7)
+	
+	sw $t6, 72($t7)
+	sw $t6, 88($t7)
+	
+	sw $t6, 100($t7)
+	sw $t6, 104($t7)
+	
+	sw $t6, 116($t7)
+	sw $t6, 128($t7)
+	
+	sw $t6, 140($t7)
+	
+	addi $t7, $t7, WIDTH_BY4	#row 2
+	sw $t6, 0($t7)
+	sw $t6, 16($t7)
+	
+	sw $t6, 24($t7)
+	sw $t6, 36($t7)
+	
+	sw $t6, 44($t7)
+	sw $t6, 56($t7)
+	
+	sw $t6, 72($t7)
+	sw $t6, 88($t7)
+	
+	sw $t6, 96($t7)
+	sw $t6, 108($t7)
+	
+	sw $t6, 116($t7)
+	sw $t6, 120($t7)
+	sw $t6, 128($t7)
+	
+	sw $t6, 140($t7)
+	
+	addi $t7, $t7, WIDTH_BY4	#row 3
+	sw $t6, 4($t7)
+	sw $t6, 8($t7)
+	sw $t6, 12($t7)
+	
+	sw $t6, 24($t7)
+	sw $t6, 36($t7)
+	
+	sw $t6, 44($t7)
+	sw $t6, 56($t7)
+	
+	sw $t6, 72($t7)
+	sw $t6, 80($t7)
+	sw $t6, 88($t7)
+	
+	sw $t6, 96($t7)
+	sw $t6, 108($t7)
+	
+	sw $t6, 116($t7)
+	sw $t6, 124($t7)
+	sw $t6, 128($t7)
+	
+	sw $t6, 140($t7)
+	
+	addi $t7, $t7, WIDTH_BY4	#row 4
+	sw $t6, 8($t7)
+	
+	sw $t6, 24($t7)
+	sw $t6, 36($t7)
+	
+	sw $t6, 44($t7)
+	sw $t6, 56($t7)
+	
+	sw $t6, 72($t7)
+	sw $t6, 80($t7)
+	sw $t6, 88($t7)
+	
+	sw $t6, 96($t7)
+	sw $t6, 108($t7)
+	
+	sw $t6, 116($t7)
+	sw $t6, 128($t7)
+
+	addi $t7, $t7, WIDTH_BY4	#row 5
+	sw $t6, 8($t7)
+	
+	sw $t6, 28($t7)
+	sw $t6, 32($t7)
+	
+	sw $t6, 48($t7)
+	sw $t6, 52($t7)
+	
+	sw $t6, 72($t7)
+	sw $t6, 88($t7)
+	
+	sw $t6, 100($t7)
+	sw $t6, 104($t7)
+	
+	sw $t6, 116($t7)
+	sw $t6, 128($t7)
+	
+	sw $t6, 140($t7)
+	
 Receivep:
 	#check whether the user has pressed any key
         li $t3, 0xffff0000 
